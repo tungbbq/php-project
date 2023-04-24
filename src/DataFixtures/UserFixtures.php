@@ -17,6 +17,7 @@ class UserFixtures extends Fixture
         $user->setOrt('Berlin');
         $user->setTelefon('01234-561789');
         $user->setPassword('111111');
+        $user->setVerifyCode(5436);
         $manager->persist($user);
 
         $user2 = new User();
@@ -26,6 +27,7 @@ class UserFixtures extends Fixture
         $user2->setOrt('Berlin');
         $user2->setTelefon('01234-561789');
         $user2->setPassword('111111');
+        $user2->setVerifyCode(2864);
         $manager->persist($user2);
 
         $manager->flush();

@@ -4,11 +4,13 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -36,11 +38,34 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
 
     #[ORM\Column(type: 'json')]
     private $roles = [];
+
+    #[ORM\Column(type: 'boolean')]
+    private $isVerified = false;
+
+    #[ORM\Column]
+    private ?int $verifyCode = null;
+
+
+    /**
+     * @return int|null
+     */
+    public function getVerifyCode(): ?int
+    {
+        return $this->verifyCode;
+    }
+
+    /**
+     * @param int|null $verifyCode
+     */
+    public function setVerifyCode(?int $verifyCode): void
+    {
+        $this->verifyCode = $verifyCode;
+    }
+
+
     /**
      * @return string|null
      */
-
-
     public function getId(): ?int
     {
         return $this->id;
@@ -116,6 +141,9 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
             'ort' => $this->ort,
             'telefon' => $this->telefon,
             'password' => $this->password,
+            'roles' => $this->roles,
+            'isVerified' => $this->isVerified,
+            'verifyCode' => $this->verifyCode,
         ];
     }
 
@@ -167,5 +195,17 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
     {
         // If you store any temporary, sensitive data on the user, clear it here
          $this->plainPassword = null;
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->isVerified;
+    }
+
+    public function setIsVerified(bool $isVerified): self
+    {
+        $this->isVerified = $isVerified;
+
+        return $this;
     }
 }

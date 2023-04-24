@@ -35,6 +35,7 @@ class UserController extends AbstractController
                 'telefon' => $human->getTelefon(),
                 'password' => $human->getPassword(),
                 'roles' => $human->getRoles(),
+                'isVerified' => $human->isVerified(),
             ];
         }
         return $this->json($data);
@@ -63,6 +64,7 @@ class UserController extends AbstractController
             'telefon' => $user->getTelefon(),
             'password' => $user->getPassword(),
             'roles' => $user->getRoles(),
+            'isVerified' => $user->isVerified(),
         ];
 
         return $this->json($data);
