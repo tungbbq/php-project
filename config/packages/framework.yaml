@@ -13,6 +13,9 @@ framework:
         cookie_samesite: lax
         storage_factory_id: session.storage.factory.native
 
+    profiler:
+        collect: false
+        collect_parameter: 'profile'
     #esi: true
     #fragments: true
     php_errors:
@@ -23,3 +26,6 @@ when@test:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+        profiler:
+            collect: false
+            collect_parameter: 'profile'

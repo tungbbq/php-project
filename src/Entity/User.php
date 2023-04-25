@@ -37,7 +37,7 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
     private ?string $password = null;
 
     #[ORM\Column(type: 'json')]
-    private $roles = [];
+    private array $roles = [];
 
     #[ORM\Column(type: 'boolean')]
     private $isVerified = false;
