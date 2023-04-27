@@ -119,6 +119,7 @@ class RegistrationController extends AbstractController
 //        TODO Monolog
         }
         return $this->json('Created new User successfully with id ' . $user->getId());
+//        return $this->json(['message' => 'Registered Successfully']);
     }
 
 //    #[Route('/verify', name: 'registration_confirmation_route')]
