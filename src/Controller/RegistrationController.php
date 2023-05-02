@@ -79,7 +79,7 @@ class RegistrationController extends AbstractController
     }
 
     #[
-        Route('/user', name: 'user_new', methods: ['POST'])]
+        Route('/register', name: 'user_new', methods: ['POST'])]
     public function new(MailerInterface $mailer, ManagerRegistry $doctrine, Request $request, UserPasswordHasherInterface $passwordHasher): Response
     {
         $content = $request->getContent();
