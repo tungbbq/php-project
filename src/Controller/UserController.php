@@ -42,9 +42,6 @@ class UserController extends AbstractController
     }
 
 
-
-
-
     #[Route('/user/{id}', name: 'user_show', methods: ['GET'])]
     public function show(ManagerRegistry $doctrine, int $id): Response
     {
@@ -55,7 +52,7 @@ class UserController extends AbstractController
             return $this->json('No User found for id' . $id, 404);
         }
 
-        $data =  [
+        $data = [
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'name' => $user->getName(),
@@ -97,7 +94,7 @@ class UserController extends AbstractController
 //        TODO Monolog
         }
 
-        $data =  [
+        $data = [
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'name' => $user->getName(),

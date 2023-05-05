@@ -7,23 +7,27 @@ security:
                 class: App\Entity\User
                 property: email
     firewalls:
+#
+#        login:
+#            pattern: ^/api/login
+#            stateless: true
+#            provider: app_user_provider
+#
 
-        login:
-            pattern: ^/api/login
-            stateless: true
+        api:
             provider: app_user_provider
+            pattern: ^/api
+            stateless: true
+            entry_point: jwt
             json_login:
                 check_path: /api/login_check
                 username_path: email
                 password_path: password
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
-
-        api:
-            provider: app_user_provider
-            pattern: ^/api
-            stateless: true
             jwt: ~
+            refresh_jwt:
+                check_path: /api/token/refresh
 
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
@@ -31,7 +35,9 @@ security:
 
     access_control:
         - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/(login|token/refresh), roles: PUBLIC_ACCESS }
 
     password_hashers:
         # By default, password hashers are resource intensive and take time. This is
