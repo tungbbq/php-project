@@ -45,6 +45,21 @@ class UserController extends AbstractController
     #[Route('/user/{id}', name: 'user_show', methods: ['GET'])]
     public function show(ManagerRegistry $doctrine, int $id): Response
     {
+        /*
+         * 1. User geht zu My Data
+         *  --> Zeigen alle Daten aber mit disabled
+         *  --> Rechts zu jedem Feld gibts einen Button zu ändern
+         *  --> Erst wenn Button geklicked ist, darf man eingeben
+         *
+         * 2. Submit
+         *  --> Valideren Email/Password --> Wichtig!!!
+         *  --> Alle anderen Daten don't care
+         *  --> Fertig
+         *
+         *
+         *
+         */
+
         $user = $doctrine->getRepository(User::class)->find($id);
 
         if (!$user) {
@@ -59,7 +74,8 @@ class UserController extends AbstractController
             'plz' => $user->getPlz(),
             'ort' => $user->getOrt(),
             'telefon' => $user->getTelefon(),
-            'password' => $user->getPassword(),
+            'password' => $user->getPassword(), // --> hashed Text --> sollte nicht gemacht werden
+//            'password' => 'currentPassword',
             'roles' => $user->getRoles(),
             'isVerified' => $user->isVerified(),
         ];
@@ -68,7 +84,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/user/{id}', name: 'user_edit', methods: ['PUT'])]
-    public function edit(ManagerRegistry $doctrine, Request $request, int $id): Response
+    public function edit(ManagerRegistry $doctrine, Request $request, int $id, UserPasswordHasherInterface $passwordHasher): Response
     {
         $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
@@ -80,32 +96,38 @@ class UserController extends AbstractController
         $content = $request->getContent();
         $contentArray = json_decode($content, true);
 
+//        TODO Valideren email&password
         try {
             $user->setEmail($contentArray['email']);
             $user->setName($contentArray['name']);
             $user->setPlz($contentArray['plz']);
             $user->setOrt($contentArray['ort']);
-            $user->setPassword($contentArray['password']);
-            $user->setTelefon($contentArray['telefon']);
 
+            // Vergleich passwort
+            $passwordFromDB = $user->getPassword();
+            $newPassword = $passwordHasher->hashPassword($user, $contentArray['password']);
+            if ($newPassword !== $passwordFromDB && $contentArray['password'] !== $passwordFromDB) {
+                $user->setPassword($contentArray['password']);
+            }
+            $user->setTelefon($contentArray['telefon']);
             $entityManager->flush();
         } catch (\Exception $e) {
             dump($e->getMessage());
 //        TODO Monolog
         }
 
-        $data = [
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'name' => $user->getName(),
-            'plz' => $user->getPlz(),
-            'ort' => $user->getOrt(),
-            'telefon' => $user->getTelefon(),
-            'password' => $user->getPassword(),
-            'roles' => $user->getRoles(),
-        ];
+//        $data = [
+//            'id' => $user->getId(),
+//            'email' => $user->getEmail(),
+//            'name' => $user->getName(),
+//            'plz' => $user->getPlz(),
+//            'ort' => $user->getOrt(),
+//            'telefon' => $user->getTelefon(),
+//            'password' => $user->getPassword(),
+//            'roles' => $user->getRoles(),
+//        ];
 
-        return $this->json($data);
+        return $this->json('{"status": "success"}');
     }
 
     #[Route('/user/{id}', name: 'user_delete', methods: ['DELETE'])]
