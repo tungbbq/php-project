@@ -78,8 +78,7 @@ class RegistrationController extends AbstractController
         exit();
     }
 
-    #[
-        Route('/register', name: 'user_new', methods: ['POST'])]
+    #[Route('/register', name: 'user_new', methods: ['POST'])]
     public function new(MailerInterface $mailer, ManagerRegistry $doctrine, Request $request, UserPasswordHasherInterface $passwordHasher): Response
     {
         $content = $request->getContent();
@@ -118,8 +117,7 @@ class RegistrationController extends AbstractController
             dump($e->getMessage());
 //        TODO Monolog
         }
-        return $this->json('Created new User successfully with id ' . $user->getId());
-//        return $this->json(['message' => 'Registered Successfully']);
+        return $this->json(['success' => true]);
     }
 
 //    #[Route('/verify', name: 'registration_confirmation_route')]

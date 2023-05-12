@@ -34,11 +34,12 @@ security:
             security: false
 
     access_control:
-        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api/(login|token/refresh), roles: PUBLIC_ACCESS }
+        - { path: ^/api/user/search, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/user/\d+/\d+, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
-        - { path: ^/api/(login|token/refresh), roles: PUBLIC_ACCESS }
+
 
     password_hashers:
         # By default, password hashers are resource intensive and take time. This is

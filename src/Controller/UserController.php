@@ -12,30 +12,85 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
+
 #[Route('/api', name: 'api_')]
 class UserController extends AbstractController
 {
 
+    #[Route('/user/search', name: 'user_search', methods: ['POST'])]
+    public function search(ManagerRegistry $doctrine, Request $request): Response
+    {
+        $entityManager = $doctrine->getManager();
+        $userRepository = $entityManager->getRepository(User::class);
+
+        $content = $request->getContent();
+        $contentArray = json_decode($content, true);
+
+        $parameters =[];
+
+        if (isset($contentArray['email']) && $contentArray['email'] !== ''){
+            $parameters['email'] = $contentArray['email'];
+        }
+
+        if (isset($contentArray['name']) && $contentArray['name'] !== ''){
+            $parameters['name'] = ['name' => $contentArray['name']];
+        }
+
+        if (isset($contentArray['plz']) && $contentArray['plz'] !== ''){
+            $parameters['plz'] = ['plz' => $contentArray['plz']];
+        }
+
+        if (isset($contentArray['ort']) && $contentArray['ort'] !== ''){
+            $parameters['ort'] = ['ort' => $contentArray['ort']];
+        }
+
+        if (isset($contentArray['telefon']) && $contentArray['telefon'] !== ''){
+            $parameters['telefon'] = ['telefon' => $contentArray['telefon']];
+        }
+
+        $users = $userRepository->findBy($parameters);
+
+        $data = [];
+
+        foreach ($users as $user) {
+            $data[] = [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'name' => $user->getName(),
+                'plz' => $user->getPlz(),
+                'ort' => $user->getOrt(),
+                'telefon' => $user->getTelefon(),
+                'password' => $user->getPassword(),
+                'roles' => $user->getRoles(),
+                'isVerified' => $user->isVerified(),
+            ];
+        }
+
+        return $this->json($data);
+
+
+    }
+
     #[Route('/user', name: 'user_index', methods: ['GET'])]
     public function index(ManagerRegistry $doctrine): Response
     {
-        $humans = $doctrine
+        $users = $doctrine
             ->getRepository(User::class)
             ->findAll();
 
         $data = [];
 
-        foreach ($humans as $human) {
+        foreach ($users as $user) {
             $data[] = [
-                'id' => $human->getId(),
-                'email' => $human->getEmail(),
-                'name' => $human->getName(),
-                'plz' => $human->getPlz(),
-                'ort' => $human->getOrt(),
-                'telefon' => $human->getTelefon(),
-                'password' => $human->getPassword(),
-                'roles' => $human->getRoles(),
-                'isVerified' => $human->isVerified(),
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'name' => $user->getName(),
+                'plz' => $user->getPlz(),
+                'ort' => $user->getOrt(),
+                'telefon' => $user->getTelefon(),
+                'password' => $user->getPassword(),
+                'roles' => $user->getRoles(),
+                'isVerified' => $user->isVerified(),
             ];
         }
         return $this->json($data);
@@ -127,7 +182,7 @@ class UserController extends AbstractController
 //            'roles' => $user->getRoles(),
 //        ];
 
-        return $this->json('{"status": "success"}');
+        return $this->json(['success' => true]);
     }
 
     #[Route('/user/{id}', name: 'user_delete', methods: ['DELETE'])]
@@ -143,6 +198,6 @@ class UserController extends AbstractController
         $entityManager->remove($user);
         $entityManager->flush();
 
-        return $this->json('Deleted a User successfully with id ' . $id);
+        return $this->json(['success' => true]);
     }
 }
