@@ -150,6 +150,7 @@ class UserController extends AbstractController
 
         $content = $request->getContent();
         $contentArray = json_decode($content, true);
+        echo '<pre>'; print_r(array($contentArray['roles'])); echo '</pre>';
 
 //        TODO Valideren email&password
         try {
@@ -162,9 +163,20 @@ class UserController extends AbstractController
             $passwordFromDB = $user->getPassword();
             $newPassword = $passwordHasher->hashPassword($user, $contentArray['password']);
             if ($newPassword !== $passwordFromDB && $contentArray['password'] !== $passwordFromDB) {
-                $user->setPassword($contentArray['password']);
+                $plaintextPassword = $contentArray['password'];
+                $hashedPassword = $passwordHasher->hashPassword(
+                    $user,
+                    $plaintextPassword
+                );
+                $user->setPassword($hashedPassword);
             }
             $user->setTelefon($contentArray['telefon']);
+
+            if(isset($contentArray['roles'])) {
+
+                $user->setRoles(array(($contentArray['roles'])));
+            }
+
             $entityManager->flush();
         } catch (\Exception $e) {
             dump($e->getMessage());
