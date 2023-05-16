@@ -22,6 +22,7 @@ class JWTCreatedListener
         $payload['Id'] = $user->getId();
         $payload['username'] = $user->getEmail();
         $payload['roles'] = $user->getRoles();
+        $payload['isVerified'] = $user->isVerified();
 
         $event->setData($payload);
     }
