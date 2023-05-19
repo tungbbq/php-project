@@ -2,15 +2,19 @@
 
 namespace App\Controller;
 
+use App\Entity\JsonRequestValidator;
+use App\Entity\SearchValidation;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Lcobucci\JWT\Validation\Validator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 
 #[Route('/api', name: 'api_')]
@@ -18,34 +22,53 @@ class UserController extends AbstractController
 {
 
     #[Route('/user/search', name: 'user_search', methods: ['POST'])]
-    public function search(ManagerRegistry $doctrine, Request $request): Response
+    public function search(ManagerRegistry $doctrine, Request $request, ValidatorInterface $validator): Response
     {
         $entityManager = $doctrine->getManager();
         $userRepository = $entityManager->getRepository(User::class);
 
         $content = $request->getContent();
         $contentArray = json_decode($content, true);
+        $jsonRequest = new SearchValidation();
 
         $parameters =[];
 
         if (isset($contentArray['email']) && $contentArray['email'] !== ''){
+            $jsonRequest->email = $contentArray['email'];
             $parameters['email'] = $contentArray['email'];
         }
 
         if (isset($contentArray['name']) && $contentArray['name'] !== ''){
+            $jsonRequest->name = $contentArray['name'];
             $parameters['name'] = ['name' => $contentArray['name']];
         }
 
         if (isset($contentArray['plz']) && $contentArray['plz'] !== ''){
+            $jsonRequest->plz = $contentArray['plz'];
             $parameters['plz'] = ['plz' => $contentArray['plz']];
         }
 
         if (isset($contentArray['ort']) && $contentArray['ort'] !== ''){
+            $jsonRequest->ort = $contentArray['ort'];
             $parameters['ort'] = ['ort' => $contentArray['ort']];
         }
 
         if (isset($contentArray['telefon']) && $contentArray['telefon'] !== ''){
+            $jsonRequest->telefon = $contentArray['telefon'];
             $parameters['telefon'] = ['telefon' => $contentArray['telefon']];
+        }
+
+        $errors = $validator->validate($jsonRequest);
+
+        if (count($errors) > 0) {
+            // Handle validation errors
+            // For example, you can return a JSON response with the errors
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+            }
+
+            return $this->json(['erorrs' => $errorMessages], 400);
         }
 
         $users = $userRepository->findBy($parameters);
@@ -114,7 +137,6 @@ class UserController extends AbstractController
          *
          *
          */
-
         $user = $doctrine->getRepository(User::class)->find($id);
 
         if (!$user) {
@@ -139,7 +161,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/user/{id}', name: 'user_edit', methods: ['PUT'])]
-    public function edit(ManagerRegistry $doctrine, Request $request, int $id, UserPasswordHasherInterface $passwordHasher): Response
+    public function edit(ManagerRegistry $doctrine, Request $request, int $id, UserPasswordHasherInterface $passwordHasher, ValidatorInterface $validator): Response
     {
         $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
@@ -150,7 +172,26 @@ class UserController extends AbstractController
 
         $content = $request->getContent();
         $contentArray = json_decode($content, true);
-        echo '<pre>'; print_r(array($contentArray['roles'])); echo '</pre>';
+        $jsonRequest = new SearchValidation();
+        $jsonRequest->email = $contentArray['email'];
+        $jsonRequest->name = $contentArray['name'];
+        $jsonRequest->plz = $contentArray['plz'];
+        $jsonRequest->ort = $contentArray['ort'];
+        $jsonRequest->telefon = $contentArray['telefon'];
+        $jsonRequest->password = $contentArray['password'];
+
+        $errors = $validator->validate($jsonRequest);
+
+        if (count($errors) > 0) {
+
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+            }
+
+            return $this->json(['erorrs' => $errorMessages], 400);
+        }
+
 
 //        TODO Valideren email&password
         try {

@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\User;
 
 //use App\Form\RegistrationFormType;
+use App\Entity\JsonRequestValidator;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,6 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use SymfonyCasts\Bundle\VerifyEmail\VerifyEmailHelperInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api', name: 'api_')]
 class RegistrationController extends AbstractController
@@ -79,10 +82,32 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'user_new', methods: ['POST'])]
-    public function new(MailerInterface $mailer, ManagerRegistry $doctrine, Request $request, UserPasswordHasherInterface $passwordHasher): Response
+    public function new(MailerInterface $mailer, ManagerRegistry $doctrine, Request $request, UserPasswordHasherInterface $passwordHasher, ValidatorInterface $validator): Response
     {
         $content = $request->getContent();
         $contentArray = json_decode($content, true);
+        $jsonRequest = new JsonRequestValidator();
+        $jsonRequest->email = $contentArray['email'];
+        $jsonRequest->name = $contentArray['name'];
+        $jsonRequest->plz = $contentArray['plz'];
+        $jsonRequest->ort = $contentArray['ort'];
+        $jsonRequest->telefon = $contentArray['telefon'];
+        $jsonRequest->password = $contentArray['password'];
+
+        $errors = $validator->validate($jsonRequest);
+
+        if (count($errors) > 0) {
+            // Handle validation errors
+            // For example, you can return a JSON response with the errors
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+            }
+
+            return $this->json(['erorrs' => $errorMessages], 400);
+        }
+
+
 
         try {
             $entityManager = $doctrine->getManager();
@@ -115,7 +140,7 @@ class RegistrationController extends AbstractController
 
         } catch (\Exception $e) {
             dump($e->getMessage());
-//        TODO Monolog
+
         }
         return $this->json(['success' => true]);
     }
