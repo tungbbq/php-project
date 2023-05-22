@@ -16,12 +16,7 @@ class SearchValidation
 
     #[Assert\PositiveOrZero]
     #[Assert\Type('int')]
-    #[Assert\Length(
-        min: 5,
-        max: 5,
-        minMessage: 'Bitte gebe einen 5-Stelligen Code an.',
-        maxMessage: 'Bitte gebe einen 5-Stelligen Code an.'
-    )]
+
     public $plz;
 
     #[Assert\Type('alpha')]

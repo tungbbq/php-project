@@ -43,7 +43,7 @@ class UserController extends AbstractController
             $parameters['name'] = ['name' => $contentArray['name']];
         }
 
-        if (isset($contentArray['plz']) && $contentArray['plz'] !== ''){
+        if (isset($contentArray['plz']) && $contentArray['plz'] !== 0){
             $jsonRequest->plz = $contentArray['plz'];
             $parameters['plz'] = ['plz' => $contentArray['plz']];
         }
