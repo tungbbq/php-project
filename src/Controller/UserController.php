@@ -201,15 +201,17 @@ class UserController extends AbstractController
             $user->setOrt($contentArray['ort']);
 
             // Vergleich passwort
-            $passwordFromDB = $user->getPassword();
-            $newPassword = $passwordHasher->hashPassword($user, $contentArray['password']);
-            if ($newPassword !== $passwordFromDB && $contentArray['password'] !== $passwordFromDB) {
-                $plaintextPassword = $contentArray['password'];
-                $hashedPassword = $passwordHasher->hashPassword(
-                    $user,
-                    $plaintextPassword
-                );
-                $user->setPassword($hashedPassword);
+            if ($contentArray['password'] !== '') {
+                $passwordFromDB = $user->getPassword();
+                $newPassword = $passwordHasher->hashPassword($user, $contentArray['password']);
+                if ($newPassword !== $passwordFromDB && $contentArray['password'] !== $passwordFromDB) {
+                    $plaintextPassword = $contentArray['password'];
+                    $hashedPassword = $passwordHasher->hashPassword(
+                        $user,
+                        $plaintextPassword
+                    );
+                    $user->setPassword($hashedPassword);
+                }
             }
             $user->setTelefon($contentArray['telefon']);
 
