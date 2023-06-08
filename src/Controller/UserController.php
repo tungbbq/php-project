@@ -2,19 +2,19 @@
 
 namespace App\Controller;
 
-use App\Entity\JsonRequestValidator;
 use App\Entity\SearchValidation;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
-use Lcobucci\JWT\Validation\Validator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 
 #[Route('/api', name: 'api_')]
@@ -97,6 +97,10 @@ class UserController extends AbstractController
     #[Route('/user', name: 'user_index', methods: ['GET'])]
     public function index(ManagerRegistry $doctrine): Response
     {
+        // Nur vorhanden wenn es ein Login-Form genutzt hat
+        $loggedInUser = $this->getUser();
+        $authenticatedUser = $this->getUser();
+
         $users = $doctrine
             ->getRepository(User::class)
             ->findAll();

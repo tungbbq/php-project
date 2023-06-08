@@ -164,9 +164,14 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
     {
         $roles = $this->roles;
         // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
+        $roles[] = 'ROLE_READ';
 
         return array_unique($roles);
+    }
+
+    public function addRole(string $role): void
+    {
+        $this->roles[] = $role;
     }
 
     public function setRoles(array $roles): self
