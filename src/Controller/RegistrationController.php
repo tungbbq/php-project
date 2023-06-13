@@ -4,10 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 
-//use App\Form\RegistrationFormType;
 use App\Entity\JsonRequestValidator;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -84,7 +81,7 @@ class RegistrationController extends AbstractController
     #[Route('/register', name: 'user_new', methods: ['POST'])]
     public function new(MailerInterface $mailer, ManagerRegistry $doctrine, Request $request, UserPasswordHasherInterface $passwordHasher, ValidatorInterface $validator): Response
     {
-        $content = $request->getContent();
+        $content = $request->getContentTypeFormat();
         $contentArray = json_decode($content, true);
         $jsonRequest = new JsonRequestValidator();
         $jsonRequest->email = $contentArray['email'];
