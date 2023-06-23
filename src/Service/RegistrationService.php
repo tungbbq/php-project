@@ -6,7 +6,6 @@ use App\Entity\JsonRequestValidator;
 use App\Entity\User;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -65,12 +64,12 @@ class RegistrationService
         exit();
     }
 
-    public function newUser(): Response
+    public function newUser(): array
     {
         $content = $this->requestStack->getCurrentRequest()->getContent();
         $contentArray = json_decode($content, true);
         $jsonRequest = new JsonRequestValidator();
-        $parameters = ['email', 'name', 'plz', 'ort', 'telefon'];
+        $parameters = ['email', 'name', 'plz', 'ort', 'telefon', 'password'];
         foreach($parameters as $para)
         {
             $jsonRequest->$para = $contentArray[$para];
@@ -85,7 +84,7 @@ class RegistrationService
                 $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
 
-            return ['erorrs' => $errorMessages, 400];
+            return ['errors' => $errorMessages, 400];
         }
 
         try {

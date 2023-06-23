@@ -11,6 +11,10 @@ use Symfony\Component\Routing\Annotation\Route;
 class RegistrationController extends AbstractController
 {
     private RegistrationService $registrationService;
+    public function __construct(RegistrationService $registrationService)
+    {
+        $this->registrationService = $registrationService;
+    }
 
     #[Route('/user/{id}/{verifyCode}', name: 'user_verification', methods: ['GET'])]
     public function verify(int $id, int $verifyCode): void
@@ -21,10 +25,8 @@ class RegistrationController extends AbstractController
     #[Route('/register', name: 'user_new', methods: ['POST'])]
     public function new(): Response
     {
-
         return $this->json($this->registrationService->newUser());
     }
-
 
 }
 
