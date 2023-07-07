@@ -28,6 +28,8 @@ security:
             jwt: ~
             refresh_jwt:
                 check_path: /api/token/refresh
+            logout:
+                path: api_token_invalidate
 
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/

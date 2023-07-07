@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\SearchValidation;
+use Doctrine\DBAL\Driver\Exception;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\User;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -28,6 +29,9 @@ class UserService
     private function transformUsersToArray(array $users): array
     {
         $data = [];
+        if (!count(array_filter($users))) {
+            return [];
+        }
         foreach ($users as $user) {
             $data[] = [
                 'id' => $user->getId(),
@@ -62,11 +66,19 @@ class UserService
 
     public function getUsers(): array
     {
-        $users = $this->managerRegistry
-            ->getRepository(User::class)
-            ->findAll();
+        try {
+            $users = $this->managerRegistry
+                ->getRepository(User::class)
+                ->findAll();
+            if (!$users) {
+                throw new \Exception('test');
+            }
+            return $this->transformUsersToArray($users);
+        } catch (\Exception $e) {
+            return ['status' => 'failure', 'message' => $e->getMessage(), 'statusCode' => 500];
 
-        return $this->transformUsersToArray($users);
+        }
+
     }
 
     public function searchUsers(): array
@@ -81,7 +93,7 @@ class UserService
         $parameters = [];
 
         foreach ($validFields as $field) {
-            if (isset($contentArray[$field]) && $contentArray[$field] !== '') {
+            if (isset($contentArray[$field]) && $contentArray[$field] !== '' && $contentArray[$field] !== 0) {
                 $jsonRequest->$field = $contentArray[$field];
                 $parameters[$field] = [$field => $contentArray[$field]];
             }
@@ -96,13 +108,30 @@ class UserService
 
     public function getUserById($id): array
     {
-        $user = $this->managerRegistry->getRepository(User::class)->find($id);
 
+        $user = $this->managerRegistry->getRepository(User::class)->find($id);
         if (!$user) {
-            return ['No User found for id' . $id, 404];
+            $user = [];
         }
         return $this->transformUsersToArray([$user]);
+
     }
+
+
+//{
+//try {
+//
+//
+//$user = $this->managerRegistry->getRepository(User::class)->find($id);
+//
+//if (!$user) {
+//throw new \Exception('No User found for id' . $id, 404);
+//}
+//return $this->transformUsersToArray([$user]);
+//} catch (\Exception $e) {
+//    return ['status' => 'failure', 'message' => $e->getMessage(), 'code' => $e->getCode()];
+//}
+//    }
 
     public function updateUser($id): array
     {
@@ -110,7 +139,7 @@ class UserService
         $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            return $this->json('No User found for id' . $id, 404);
+            return $this->transformUsersToArray([]);;
         }
 
         $content = $this->requestStack->getCurrentRequest()->getContent();
@@ -157,13 +186,13 @@ class UserService
         return ['success' => true];
     }
 
-    public function deleteUser($id)
+    public function deleteUser($id): array
     {
         $entityManager = $this->managerRegistry->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            return $this->json('No User found for id' . $id, 404);
+            return $this->transformUsersToArray([]);;
         }
 
         $entityManager->remove($user);

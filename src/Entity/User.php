@@ -39,8 +39,6 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
     #[ORM\Column(type: 'json')]
     private array $roles = [];
 
-    #[ORM\Column(type: 'boolean')]
-    private $isVerified = false;
 
     #[ORM\Column]
     private ?int $verifyCode = null;
@@ -142,7 +140,6 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
             'telefon' => $this->telefon,
             'password' => $this->password,
             'roles' => $this->roles,
-            'isVerified' => $this->isVerified,
             'verifyCode' => $this->verifyCode,
         ];
     }
@@ -202,15 +199,4 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
          $this->plainPassword = null;
     }
 
-    public function isVerified(): bool
-    {
-        return $this->isVerified;
-    }
-
-    public function setIsVerified(bool $isVerified): self
-    {
-        $this->isVerified = $isVerified;
-
-        return $this;
-    }
 }

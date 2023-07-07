@@ -7,7 +7,5 @@ api_login_check:
     path: /api/login_check
 api_refresh_token:
     path: /api/token/refresh
-#jwt_auth:
-#    path: /auth
-#jwt_refresh:
-#    path: /auth/refresh
+api_token_invalidate:
+    path: /api/token/invalidate

@@ -4,14 +4,20 @@ namespace App\Service;
 
 use App\Entity\JsonRequestValidator;
 use App\Entity\User;
+use App\Entity\verifyCodeAndIdValidator;
+use App\Exception\MyFirstCustomException;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\VerifyEmailHelperInterface;
+use function PHPUnit\Framework\throwException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class RegistrationService
 {
@@ -33,48 +39,48 @@ class RegistrationService
         $this->validator = $validator;
     }
 
-    public function verifyUser($id, $verifyCode): void
+    public function verifyUser($id, $verifyCode): array
     {
+        $request = new verifyCodeAndIdValidator();
+        $request->setId($id);
+        $request->setVerifyCode($verifyCode);
 
-        if (!is_numeric($id) || !is_numeric($verifyCode)) {
-            exit('ID/Code nicht korrekt');
-        }
+        $errors = $this->validator->validate($request);
+        if (count($errors) > 0) {
+            // Handle validation errors
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+            }
 
-        // Validate range
-        if ($id <= 0 || $verifyCode <= 999 || $verifyCode >= 10000) {
-            exit('ID/Code nicht korrekt');
+            return ['content' => ['status' => 'failure', 'code' =>Response::HTTP_BAD_REQUEST,  'message' => ['errors' => $errorMessages], 'data' => []], 'statusCode' => Response::HTTP_BAD_REQUEST];
         }
 
         $entityManager = $this->managerRegistry->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            exit('User existiert nicht.');
-        } else if (!$verifyCode) {
-            exit('Code ist falsch.');
-        }
-
-        try {
-            $user->setIsVerified(true);
+            return ['content' => ['status' => 'failure', 'code' =>Response::HTTP_NOT_FOUND,  'message' => "UserID {$id} existiert nicht.", 'data' => []], 'statusCode' => Response::HTTP_NOT_FOUND];
+//            throw new NotFoundHttpException("UserID {$id} existiert nicht.");
+        } elseif ($user->getId() === $id && $user->getVerifyCode() === $verifyCode) {
+            $user->setVerifyCode(1);
             $entityManager->flush();
-        } catch (\Exception $e) {
-            dump($e->getMessage());
+            return ['content' => ['status' => 'success', 'code' => Response::HTTP_OK, 'message' => 'User wurde erfolgreich verifiziert.', 'data' => []], 'statusCode' => Response::HTTP_OK];
         }
-        header('Location:http://localhost:5173/confirmNewUser');
-        exit();
+        return ['content' => ['status' => 'failure', 'code' =>Response::HTTP_UNAUTHORIZED,  'message' => 'Verifizierungslink ist nicht gültig.', 'data' => []], 'statusCode' => Response::HTTP_UNAUTHORIZED];
     }
 
-    public function newUser(): array
+    public function createUser(): array
     {
         $content = $this->requestStack->getCurrentRequest()->getContent();
         $contentArray = json_decode($content, true);
         $jsonRequest = new JsonRequestValidator();
         $parameters = ['email', 'name', 'plz', 'ort', 'telefon', 'password'];
-        foreach($parameters as $para)
-        {
-            $jsonRequest->$para = $contentArray[$para];
+        foreach ($parameters as $para) {
+            if (isset($contentArray[$para])) {
+                $jsonRequest->$para = $contentArray[$para];
+            }
         }
-
         $errors = $this->validator->validate($jsonRequest);
 
         if (count($errors) > 0) {
@@ -106,7 +112,7 @@ class RegistrationService
             $entityManager->persist($user);
             $entityManager->flush();
 
-            $confirmationURL = 'https://myproject.ddev.site/api/user/' . $user->getId() . '/' . $user->getVerifyCode();
+            $confirmationURL = 'http://localhost:5173/Verification/' . $user->getId() . '/' . $user->getVerifyCode();
 
             $email = (new Email())
                 ->from('test@mail.com')
@@ -121,6 +127,6 @@ class RegistrationService
         } catch (TransportExceptionInterface $e) {
             dump($e->getMessage());
         }
-        return ['success' => true];
+        return ['success' => true, 201];
     }
 }
