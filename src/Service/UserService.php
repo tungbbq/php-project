@@ -3,9 +3,13 @@
 namespace App\Service;
 
 use App\Entity\SearchValidation;
+use App\Exception\NoUserException;
+use App\Exception\ValidationErrorException;
 use Doctrine\DBAL\Driver\Exception;
+use Doctrine\ORM\EntityNotFoundException;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\User;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -41,46 +45,53 @@ class UserService
                 'ort' => $user->getOrt(),
                 'telefon' => $user->getTelefon(),
                 'password' => $user->getPassword(),
-                'roles' => $user->getRoles(),
-                'isVerified' => $user->isVerified(),
+                'roles' => $user->getRoles()
             ];
         }
 
-        return $data;
+        return [
+            'data' => [
+                'status' => 'success',
+                'message' => 'User(s) wurden erfolgreich bereitgestellt.',
+                'response' => $data
+            ]
+        ];
     }
 
-    private function errorValidator($jsonRequest)
+    private function errorCheck($jsonRequest): string
     {
+        $errorMessage = '';
         $errors = $this->validator->validate($jsonRequest);
 
         if (count($errors) > 0) {
-            $errorMessages = [];
-            foreach ($errors as $error) {
-                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
-            }
 
-            return $errorMessages;
+            foreach ($errors as $error) {
+                $errorMessage .= $error->getPropertyPath() . ' = ' . $error->getMessage();
+            }
+//            return $errorMessage;
         }
+        return $errorMessage;
     }
 
 
+    /**
+     * @throws NoUserException
+     */
     public function getUsers(): array
     {
-        try {
-            $users = $this->managerRegistry
-                ->getRepository(User::class)
-                ->findAll();
-            if (!$users) {
-                throw new \Exception('test');
-            }
-            return $this->transformUsersToArray($users);
-        } catch (\Exception $e) {
-            return ['status' => 'failure', 'message' => $e->getMessage(), 'statusCode' => 500];
-
+        $users = $this->managerRegistry
+            ->getRepository(User::class)
+            ->findAll();
+        // check sinnvoll?
+        if (!$users) {
+            throw new NoUserException('Kein User vorhanden');
         }
-
+        return $this->transformUsersToArray($users);
     }
 
+    /**
+     * @throws ValidationErrorException
+     */
     public function searchUsers(): array
     {
         $entityManager = $this->managerRegistry->getManager();
@@ -89,115 +100,107 @@ class UserService
         $content = $this->requestStack->getCurrentRequest()->getContent();
         $contentArray = json_decode($content, true);
         $validFields = ['email', 'name', 'plz', 'ort', 'telefon'];
-        $jsonRequest = new SearchValidation();
+        $searchQuery = new SearchValidation();
         $parameters = [];
 
         foreach ($validFields as $field) {
             if (isset($contentArray[$field]) && $contentArray[$field] !== '' && $contentArray[$field] !== 0) {
-                $jsonRequest->$field = $contentArray[$field];
+                $searchQuery->$field = $contentArray[$field];
                 $parameters[$field] = [$field => $contentArray[$field]];
             }
         }
 
-        $this->errorValidator($jsonRequest);
+        $errors = $this->errorCheck($searchQuery);
+
+        if ($errors !== '') {
+            throw new ValidationErrorException($errors);
+        }
 
         $users = $userRepository->findBy($parameters);
 
         return $this->transformUsersToArray($users);
     }
 
+    /**
+     * @throws NoUserException
+     */
     public function getUserById($id): array
     {
 
         $user = $this->managerRegistry->getRepository(User::class)->find($id);
         if (!$user) {
-            $user = [];
+            throw new NoUserException(`UserID {$id} existiert nicht.`);
         }
         return $this->transformUsersToArray([$user]);
 
     }
 
 
-//{
-//try {
-//
-//
-//$user = $this->managerRegistry->getRepository(User::class)->find($id);
-//
-//if (!$user) {
-//throw new \Exception('No User found for id' . $id, 404);
-//}
-//return $this->transformUsersToArray([$user]);
-//} catch (\Exception $e) {
-//    return ['status' => 'failure', 'message' => $e->getMessage(), 'code' => $e->getCode()];
-//}
-//    }
-
-    public function updateUser($id): array
+    /**
+     * @throws NoUserException
+     * @throws ValidationErrorException
+     */
+    public function updateUser($id): void
     {
         $entityManager = $this->managerRegistry->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            return $this->transformUsersToArray([]);;
+            throw new NoUserException(`UserID {$id} existiert nicht.`);
         }
 
         $content = $this->requestStack->getCurrentRequest()->getContent();
         $contentArray = json_decode($content, true);
-        $jsonRequest = new SearchValidation();
+        $updateParam = new SearchValidation();
         $parameters = ['email', 'name', 'plz', 'ort', 'telefon', 'password'];
 
         foreach ($parameters as $param) {
-            $jsonRequest->$param = $contentArray[$param];
+            $updateParam->$param = $contentArray[$param];
         }
 
-        $this->errorValidator($jsonRequest);
-
-        try {
-            $user->setEmail($contentArray['email']);
-            $user->setName($contentArray['name']);
-            $user->setPlz($contentArray['plz']);
-            $user->setOrt($contentArray['ort']);
-
-            // Vergleich passwort
-            if ($contentArray['password'] !== '') {
-                $passwordFromDB = $user->getPassword();
-                $newPassword = $this->passwordHasher->hashPassword($user, $contentArray['password']);
-                if ($newPassword !== $passwordFromDB && $contentArray['password'] !== $passwordFromDB) {
-                    $plaintextPassword = $contentArray['password'];
-                    $hashedPassword = $this->passwordHasher->hashPassword(
-                        $user,
-                        $plaintextPassword
-                    );
-                    $user->setPassword($hashedPassword);
-                }
-            }
-            $user->setTelefon($contentArray['telefon']);
-
-            if (isset($contentArray['roles'])) {
-
-                $user->setRoles(($contentArray['roles']));
-            }
-
-            $entityManager->flush();
-        } catch (\Exception $e) {
-            dump($e->getMessage());
+        $error = $this->errorCheck($updateParam);
+        if ($error != ''){
+            throw new ValidationErrorException($error);
         }
-        return ['success' => true];
+
+        $user->setEmail($contentArray['email']);
+        $user->setName($contentArray['name']);
+        $user->setPlz($contentArray['plz']);
+        $user->setOrt($contentArray['ort']);
+
+        // Vergleich passwort
+        if ($contentArray['password'] !== '') {
+            $hashedPasswordFromDB = $user->getPassword();
+            $newHashedPassword = $this->passwordHasher->hashPassword($user, $contentArray['password']);
+            if ($newHashedPassword !== $hashedPasswordFromDB && $contentArray['password'] !== $hashedPasswordFromDB) {
+                $user->setPassword($newHashedPassword);
+            }
+        }
+        $user->setTelefon($contentArray['telefon']);
+
+        if (isset($contentArray['roles'])) {
+
+            $user->setRoles($contentArray['roles']);
+        }
+
+        $entityManager->flush();
     }
 
-    public function deleteUser($id): array
+    /**
+     * @throws NoUserException
+     */
+    public function deleteUser($id): void
     {
         $entityManager = $this->managerRegistry->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            return $this->transformUsersToArray([]);;
+            throw new NoUserException(`UserID {$id} existiert nicht.`);
+
         }
 
         $entityManager->remove($user);
         $entityManager->flush();
 
-        return ['success' => true];
     }
 }

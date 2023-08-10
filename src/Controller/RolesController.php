@@ -6,6 +6,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class RolesController extends AbstractController
 {
+
     public function isRead(): void
     {
        $this->denyAccessUnlessGranted('ROLE_READ');

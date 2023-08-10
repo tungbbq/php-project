@@ -2,22 +2,20 @@
 
 namespace App\Service;
 
-use App\Entity\JsonRequestValidator;
+use App\Entity\RegistrationValidator;
 use App\Entity\User;
 use App\Entity\verifyCodeAndIdValidator;
-use App\Exception\MyFirstCustomException;
+use App\Exception\NoUserException;
+use App\Exception\ValidationErrorException;
 use Doctrine\Persistence\ManagerRegistry;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\VerifyEmailHelperInterface;
-use function PHPUnit\Framework\throwException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
 
 class RegistrationService
 {
@@ -29,7 +27,12 @@ class RegistrationService
     private UserPasswordHasherInterface $passwordHasher;
     private ValidatorInterface $validator;
 
-    public function __construct(ValidatorInterface $validator, UserPasswordHasherInterface $passwordHasher, ManagerRegistry $managerRegistry, VerifyEmailHelperInterface $helper, MailerInterface $mailer, RequestStack $requestStack, UserService $userService)
+    public function __construct(ValidatorInterface          $validator,
+                                UserPasswordHasherInterface $passwordHasher,
+                                ManagerRegistry             $managerRegistry,
+                                MailerInterface             $mailer,
+                                RequestStack                $requestStack,
+                                UserService                 $userService)
     {
         $this->managerRegistry = $managerRegistry;
         $this->mailer = $mailer;
@@ -39,94 +42,123 @@ class RegistrationService
         $this->validator = $validator;
     }
 
+    /**
+     * @throws ValidationErrorException
+     * @throws NoUserException
+     */
     public function verifyUser($id, $verifyCode): array
     {
-        $request = new verifyCodeAndIdValidator();
-        $request->setId($id);
-        $request->setVerifyCode($verifyCode);
+        $codeAndId = new verifyCodeAndIdValidator();
+        $codeAndId->setId($id);
+        $codeAndId->setVerifyCode($verifyCode);
 
-        $errors = $this->validator->validate($request);
+        $errors = $this->validator->validate($codeAndId);
         if (count($errors) > 0) {
             // Handle validation errors
             $errorMessages = [];
             foreach ($errors as $error) {
                 $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
-
-            return ['content' => ['status' => 'failure', 'code' =>Response::HTTP_BAD_REQUEST,  'message' => ['errors' => $errorMessages], 'data' => []], 'statusCode' => Response::HTTP_BAD_REQUEST];
+            throw new ValidationErrorException($errorMessages);
+//            return [
+//                'data' => [
+//                    'status' => 'failure',
+//                    'message' => [
+//                        'errors' => $errorMessages
+//                    ]],
+//                'statusCode' => Response::HTTP_BAD_REQUEST
+//            ];
         }
 
         $entityManager = $this->managerRegistry->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
-            return ['content' => ['status' => 'failure', 'code' =>Response::HTTP_NOT_FOUND,  'message' => "UserID {$id} existiert nicht.", 'data' => []], 'statusCode' => Response::HTTP_NOT_FOUND];
-//            throw new NotFoundHttpException("UserID {$id} existiert nicht.");
+//            return [
+//                'data' => [
+//                    'status' => 'failure',
+//                    'message' => "UserID {$id} existiert nicht."
+//                ],
+//                'statusCode' => Response::HTTP_NOT_FOUND
+//            ];
+            throw new NoUserException("UserID {$id} existiert nicht.");
         } elseif ($user->getId() === $id && $user->getVerifyCode() === $verifyCode) {
             $user->setVerifyCode(1);
             $entityManager->flush();
-            return ['content' => ['status' => 'success', 'code' => Response::HTTP_OK, 'message' => 'User wurde erfolgreich verifiziert.', 'data' => []], 'statusCode' => Response::HTTP_OK];
+            return ['data' => [
+                'status' => 'success',
+                'message' => 'User wurde erfolgreich verifiziert.'
+            ],
+                'statusCode' => Response::HTTP_OK
+            ];
         }
-        return ['content' => ['status' => 'failure', 'code' =>Response::HTTP_UNAUTHORIZED,  'message' => 'Verifizierungslink ist nicht gültig.', 'data' => []], 'statusCode' => Response::HTTP_UNAUTHORIZED];
+        return [
+            'data' => [
+                'status' => 'failure',
+                'message' => 'Verifizierungslink ist nicht gültig.'
+            ],
+            'statusCode' => Response::HTTP_UNAUTHORIZED
+        ];
     }
 
     public function createUser(): array
     {
         $content = $this->requestStack->getCurrentRequest()->getContent();
         $contentArray = json_decode($content, true);
-        $jsonRequest = new JsonRequestValidator();
-        $parameters = ['email', 'name', 'plz', 'ort', 'telefon', 'password'];
-        foreach ($parameters as $para) {
-            if (isset($contentArray[$para])) {
-                $jsonRequest->$para = $contentArray[$para];
-            }
-        }
-        $errors = $this->validator->validate($jsonRequest);
+        $user = new User();
+
+        $user->setEmail($contentArray['email']);
+        $user->setName($contentArray['name']);
+        $user->setPlz($contentArray['plz']);
+        $user->setOrt($contentArray['ort']);
+        $user->setTelefon($contentArray['telefon']);
+        $user->setPassword($contentArray['password']);
+
+        $errors = $this->validator->validate($user);
 
         if (count($errors) > 0) {
-            // Handle validation errors
+//             Handle validation errors
             $errorMessages = [];
             foreach ($errors as $error) {
                 $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
+            throw new ValidationErrorException($errorMessages);
+//            return [
+//                'data' => [
+//                    'status' => 'failure',
+//                    'message' => [
+//                        'errors' => $errorMessages
+//                    ]],
+//                'statusCode' => Response::HTTP_BAD_REQUEST];
 
-            return ['errors' => $errorMessages, 400];
         }
 
-        try {
-            $entityManager = $this->managerRegistry->getManager();
-            $user = new User();
-            $user->setEmail($contentArray['email']);
-            $user->setName($contentArray['name']);
-            $user->setPlz($contentArray['plz']);
-            $user->setOrt($contentArray['ort']);
-            $plaintextPassword = $contentArray['password'];
-            $hashedPassword = $this->passwordHasher->hashPassword(
-                $user,
-                $plaintextPassword
-            );
-            $user->setPassword($hashedPassword);
-            $user->setTelefon($contentArray['telefon']);
-            $user->setVerifyCode(mt_rand(1111, 9999));
+        $entityManager = $this->managerRegistry->getManager();
 
-            $entityManager->persist($user);
-            $entityManager->flush();
+        $hashedPassword = $this->passwordHasher->hashPassword(
+            $user,
+            $contentArray['password']
+        );
+        $user->setPassword($hashedPassword);
+        $user->setVerifyCode(mt_rand(1111, 9999));
 
-            $confirmationURL = 'http://localhost:5173/Verification/' . $user->getId() . '/' . $user->getVerifyCode();
+        $entityManager->persist($user);
+        $entityManager->flush();
 
-            $email = (new Email())
-                ->from('test@mail.com')
-                ->to($user->getEmail())
-                ->subject('Confirmation')
-                ->text($confirmationURL);
-            $this->mailer->send($email);
+        $confirmationURL = 'http://localhost:5173/Verification/' . $user->getId() . '/' . $user->getVerifyCode();
 
-        } catch (\Exception $e) {
-            dump($e->getMessage());
+        $email = (new Email())
+            ->from('test@mail.com')
+            ->to($user->getEmail())
+            ->subject('Confirmation')
+            ->text($confirmationURL);
+        $this->mailer->send($email);
 
-        } catch (TransportExceptionInterface $e) {
-            dump($e->getMessage());
-        }
-        return ['success' => true, 201];
+        return [
+            'data' => [
+                'status' => 'success',
+                'message' => 'User wurde erfolgreich angelegt.'],
+            'statusCode' => Response::HTTP_CREATED
+        ];
     }
 }

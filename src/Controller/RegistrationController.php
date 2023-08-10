@@ -2,19 +2,19 @@
 
 namespace App\Controller;
 
-use App\Exception\MyFirstCustomException;
+use App\Exception\NoUserException;
+use App\Exception\ValidationErrorException;
 use App\Service\RegistrationService;
-use Doctrine\DBAL\Driver\Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/api', name: 'api_')]
 class RegistrationController extends AbstractController
 {
     private RegistrationService $registrationService;
+
     public function __construct(RegistrationService $registrationService)
     {
         $this->registrationService = $registrationService;
@@ -25,23 +25,46 @@ class RegistrationController extends AbstractController
     {
         try {
             $response = $this->registrationService->verifyUser($id, $verifyCode);
-
-        } catch (\NotFoundHttpException ) {
-            return $this->json(['success' => false], Response::HTTP_NOT_FOUND);
-        } catch (\InvalidArgumentException ) {
-            return $this->json(['success' => false], Response::HTTP_BAD_REQUEST);
+        } catch (ValidationErrorException $e) {
+            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            return $this->json([
+                'status' => 'failure',
+                'message' => $e->getMessage()
+            ],
+                Response::HTTP_BAD_REQUEST
+            );
+        } catch (NoUserException $e2) {
+            $this->logger->error($e2->getMessage(), ['exception' => $e2]);
+            return $this->json([
+                'status' => 'failure',
+                'message' => $e2->getMessage()
+            ],
+                Response::HTTP_NOT_FOUND
+            );
         }
 
-        return $this->json($response['content'], $response['statusCode']);
+        return $this->json($response['data'], $response['statusCode']);
     }
 
     #[Route('/register', name: 'user_new', methods: ['POST'])]
     public function create(): JsonResponse
     {
-        return $this->json($this->registrationService->createUser());
+        try {
+            return $this->json($this->registrationService->createUser());
+        } catch (ValidationErrorException $e) {
+            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            return $this->json([
+                'status' => 'failure',
+                'message' => $e->getMessage()
+            ],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
     }
 
 }
+
+
 
 
 

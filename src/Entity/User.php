@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -19,21 +20,37 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 180, unique: true)]
+    #[Assert\NotBlank(message: 'Wert darf nicht leer sein.')]
+    #[Assert\Email(message: 'Keine valide Email Adresse.')]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Wert darf nicht leer sein.')]
+    #[Assert\Length(
+        max: 32,
+        maxMessage: 'Es sind nur 32 Zeichen erlaubt.'
+    )]
     private ?string $name = null;
 
     #[ORM\Column]
+    #[Assert\Positive]
+    #[Assert\Length(
+        exactly: 5,
+        exactMessage: 'Bitte gebe einen 5-Stelligen Code an.'
+    )]
     private ?int $plz = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Wert darf nicht leer sein.')]
+    #[Assert\Type('alpha')]
     private ?string $ort = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Wert darf nicht leer sein.')]
     private ?string $telefon = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Wert darf nicht leer sein.')]
     private ?string $password = null;
 
     #[ORM\Column(type: 'json')]
@@ -43,6 +60,12 @@ class User implements \JsonSerializable, UserInterface, PasswordAuthenticatedUse
     #[ORM\Column]
     private ?int $verifyCode = null;
 
+
+    // Only for test purpose
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
 
     /**
      * @return int|null
