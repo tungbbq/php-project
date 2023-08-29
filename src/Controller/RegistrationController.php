@@ -43,7 +43,10 @@ class RegistrationController extends AbstractController
             );
         }
 
-        return $this->json($response['data'], $response['statusCode']);
+        return $this->json(
+            $response['data'],
+            Response::HTTP_OK
+        );
     }
 
     #[Route('/register', name: 'user_new', methods: ['POST'])]

@@ -44,7 +44,7 @@ class UserService
                 'plz' => $user->getPlz(),
                 'ort' => $user->getOrt(),
                 'telefon' => $user->getTelefon(),
-                'password' => $user->getPassword(),
+//                'password' => $user->getPassword(),
                 'roles' => $user->getRoles()
             ];
         }
