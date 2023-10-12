@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Exception\NoUserException;
 use App\Exception\ValidationErrorException;
 use App\Service\UserService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Finder\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\Response;
@@ -193,5 +194,18 @@ class UserController extends AbstractController
             ],
             Response::HTTP_OK
         );
+    }
+
+    #[Route('/pagination', name: 'page', methods: ['GET'])]
+    public function pagination(): Response
+    {
+        $test = $this->userService->totalUserCount();
+        return $this->json([
+            'status' => 'failure',
+            'message' => $test
+        ],
+            Response::HTTP_OK
+        );
+
     }
 }
