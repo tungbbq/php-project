@@ -5,7 +5,9 @@ namespace App\Service;
 use App\Entity\SearchValidation;
 use App\Exception\NoUserException;
 use App\Exception\ValidationErrorException;
+use App\Repository\UserRepository;
 use Doctrine\DBAL\Driver\Exception;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityNotFoundException;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\User;
@@ -21,13 +23,21 @@ class UserService
     private RequestStack $requestStack;
     private ValidatorInterface $validator;
     private UserPasswordHasherInterface $passwordHasher;
+    private UserRepository $userRepository;
 
-    public function __construct(ManagerRegistry $managerRegistry, RequestStack $requestStack, ValidatorInterface $validator, UserPasswordHasherInterface $passwordHasher)
+
+    public function __construct(ManagerRegistry $managerRegistry,
+                                RequestStack $requestStack,
+                                ValidatorInterface $validator,
+                                UserPasswordHasherInterface $passwordHasher,
+                                UserRepository $userRepository
+                                )
     {
         $this->managerRegistry = $managerRegistry;
         $this->requestStack = $requestStack;
         $this->validator = $validator;
         $this->passwordHasher = $passwordHasher;
+        $this->userRepository = $userRepository;
     }
 
     private function transformUsersToArray(array $users): array
@@ -196,11 +206,15 @@ class UserService
 
         if (!$user) {
             throw new NoUserException(`UserID {$id} existiert nicht.`);
-
         }
 
         $entityManager->remove($user);
         $entityManager->flush();
 
+    }
+
+    public function totalUserCount()
+    {
+        return $this->userRepository->getTotalUserCount();
     }
 }

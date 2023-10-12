@@ -39,4 +39,17 @@ class UserRepository extends ServiceEntityRepository
         }
     }
 
+    public function getTotalUserCount()
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = '
+            SELECT COUNT(*) FROM user;
+            ';
+
+        $resultSet = $conn->executeQuery($sql);
+
+        // returns an array of arrays (i.e. a raw data set)
+        return $resultSet->fetchAllAssociative();
+    }
 }
