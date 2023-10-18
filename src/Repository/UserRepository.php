@@ -4,6 +4,8 @@ namespace App\Repository;
 
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -39,17 +41,20 @@ class UserRepository extends ServiceEntityRepository
         }
     }
 
-    public function getTotalUserCount()
+    /**
+     * @throws NonUniqueResultException
+     * @throws NoResultException
+     */
+    public function getTotalUserCount(): int
     {
-        $conn = $this->getEntityManager()->getConnection();
+        $em = $this->getEntityManager();
 
-        $sql = '
-            SELECT COUNT(*) FROM user;
-            ';
+        $qb = $em->createQueryBuilder();
 
-        $resultSet = $conn->executeQuery($sql);
+        $qb->select('COUNT(u.id)')
+            ->from(User::class, 'u');
 
-        // returns an array of arrays (i.e. a raw data set)
-        return $resultSet->fetchAllAssociative();
+        $query = $qb->getQuery();
+        return $query->getSingleScalarResult();
     }
 }
