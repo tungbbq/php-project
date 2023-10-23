@@ -196,14 +196,25 @@ class UserController extends AbstractController
         );
     }
 
-    #[Route('/pagination', name: 'page', methods: ['GET'])]
-    public function pagination(): Response
+    #[Route('/pagination', name: 'page_count', methods: ['GET'])]
+    public function getPaginationCount(): Response
     {
-        $test = $this->userService->totalUserCount();
-        return $this->json([
-            'status' => 'failure',
-            'message' => $test
-        ],
+        $this->rolesService->isRead();
+        $response = $this->userService->totalUserCount();
+        return $this->json(
+            $response,
+            Response::HTTP_OK
+        );
+
+    }
+
+    #[Route('/page/{pageNumber}', name: 'page_show', methods: ['GET'])]
+    public function showSinglePage($pageNumber): Response
+    {
+        $this->rolesService->isRead();
+        $response = $this->userService->getNewPage($pageNumber);
+        return $this->json(
+            $response['data'],
             Response::HTTP_OK
         );
 
