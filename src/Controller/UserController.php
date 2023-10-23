@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Exception\NoUserException;
 use App\Exception\ValidationErrorException;
 use App\Service\UserService;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Finder\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,7 +19,9 @@ class UserController extends AbstractController
     private RolesController $rolesService;
     private LoggerInterface $logger;
 
-    public function __construct(UserService $userService, RolesController $rolesService, LoggerInterface $logger)
+    public function __construct(UserService $userService,
+                                RolesController $rolesService,
+                                LoggerInterface $logger)
     {
         $this->userService = $userService;
         $this->rolesService = $rolesService;
@@ -125,8 +126,11 @@ class UserController extends AbstractController
     #[Route('/user/{id}', name: 'user_edit', methods: ['PUT'])]
     public function edit(int $id): Response
     {
+        $userId = $this->getUser()->getId();
         try {
-            $this->rolesService->isUpdate();
+            if ($userId !== $id) {
+                $this->rolesService->isUpdate();
+            }
             $this->userService->updateUser($id);
         }catch(AccessDeniedException $e){
             $this->logger->error($e->getMessage(), ['exception' => $e]);
@@ -153,7 +157,6 @@ class UserController extends AbstractController
                 Response::HTTP_BAD_REQUEST
             );
         }
-
         return $this->json(
             [
                 'status' => 'success',
@@ -186,7 +189,6 @@ class UserController extends AbstractController
                 Response::HTTP_NOT_FOUND
             );
         }
-
         return $this->json(
             [
                 'status' => 'success',
@@ -196,27 +198,4 @@ class UserController extends AbstractController
         );
     }
 
-    #[Route('/pagination', name: 'page_count', methods: ['GET'])]
-    public function getPaginationCount(): Response
-    {
-        $this->rolesService->isRead();
-        $response = $this->userService->totalUserCount();
-        return $this->json(
-            $response,
-            Response::HTTP_OK
-        );
-
-    }
-
-    #[Route('/page/{pageNumber}', name: 'page_show', methods: ['GET'])]
-    public function showSinglePage($pageNumber): Response
-    {
-        $this->rolesService->isRead();
-        $response = $this->userService->getNewPage($pageNumber);
-        return $this->json(
-            $response['data'],
-            Response::HTTP_OK
-        );
-
-    }
 }
