@@ -40,7 +40,7 @@ class UserService
         $this->userRepository = $userRepository;
     }
 
-    private function transformUsersToArray(array $users): array
+    public function transformUsersToArray(array $users): array
     {
         $data = [];
         if (!count(array_filter($users))) {

@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Controller;
+use App\Service\PaginationService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Finder\Exception\AccessDeniedException;
@@ -14,14 +15,18 @@ class PaginationController extends AbstractController
     private UserRepository $userRepository;
     private RolesController $rolesController;
     private LoggerInterface $logger;
+    private PaginationService $paginationService;
+
     public function __construct( UserRepository $userRepository,
                                  RolesController $rolesController,
-                                 LoggerInterface $logger
+                                 LoggerInterface $logger,
+                                 PaginationService $paginationService
     )
     {
         $this->userRepository = $userRepository;
         $this->rolesController = $rolesController;
         $this->logger = $logger;
+        $this->paginationService = $paginationService;
     }
 
     #[Route('/pagination', name: 'page_count', methods: ['GET'])]
@@ -48,8 +53,8 @@ class PaginationController extends AbstractController
     #[Route('/page/{pageNumber}', name: 'page_show', methods: ['GET'])]
     public function showSinglePage($pageNumber): Response
     {
-        $this->rolesService->isRead();
-        $response = $this->userService->getNewPage($pageNumber);
+        $this->rolesController->isRead();
+        $response = $this->paginationService->getNewPage($pageNumber);
         return $this->json(
             $response['data'],
             Response::HTTP_OK

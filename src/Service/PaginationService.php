@@ -3,22 +3,20 @@
 namespace App\Service;
 
 use App\Entity\User;
+use Doctrine\Persistence\ManagerRegistry;
+use App\Repository\UserRepository;
 
 class PaginationService
 {
     private UserService $userService;
-    private UserRepository $userRepository;
+    private ManagerRegistry $managerRegistry;
 
     public function __construct(UserService $userService,
-                                UserRepository $userRepository,
+                                ManagerRegistry $managerRegistry
     )
     {
         $this->userService = $userService;
-        $this->userRepository = $userRepository;
-    }
-    public function totalUserCount(): int
-    {
-        return $this->userRepository->getTotalUserCount();
+        $this->managerRegistry = $managerRegistry;
     }
 
     public function getNewPage($pageNumber)
@@ -36,7 +34,7 @@ class PaginationService
             ->getRepository(User::class)
             ->findBy([], null, $limit, $offset);
 
-        return $this->transformUsersToArray($users);
+        return $this->userService->transformUsersToArray($users);
     }
 
 
