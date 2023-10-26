@@ -145,7 +145,7 @@ class RegistrationService
         $entityManager->persist($user);
         $entityManager->flush();
 
-        $confirmationURL = 'http://localhost:5173/Verification/' . $user->getId() . '/' . $user->getVerifyCode();
+        $confirmationURL = 'http://localhost:5173/Verification/id/' . $user->getId() . '/code/' . $user->getVerifyCode();
 
         $email = (new Email())
             ->from('test@mail.com')
