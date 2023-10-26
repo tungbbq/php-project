@@ -23,7 +23,6 @@ class RegistrationService
     private MailerInterface $mailer;
     private ManagerRegistry $managerRegistry;
     private RequestStack $requestStack;
-    private UserService $userService;
     private UserPasswordHasherInterface $passwordHasher;
     private ValidatorInterface $validator;
 
@@ -42,6 +41,21 @@ class RegistrationService
         $this->validator = $validator;
     }
 
+    private function errorCheck($jsonRequest): string
+    {
+        $errorMessage = '';
+        $errors = $this->validator->validate($jsonRequest);
+
+        if (count($errors) > 0) {
+
+            foreach ($errors as $error) {
+                $errorMessage .= $error->getPropertyPath() . ' = ' . $error->getMessage();
+            }
+//            return $errorMessage;
+        }
+        return $errorMessage;
+    }
+
     /**
      * @throws ValidationErrorException
      * @throws NoUserException
@@ -52,22 +66,10 @@ class RegistrationService
         $codeAndId->setId($id);
         $codeAndId->setVerifyCode($verifyCode);
 
-        $errors = $this->validator->validate($codeAndId);
-        if (count($errors) > 0) {
-            // Handle validation errors
-            $errorMessages = [];
-            foreach ($errors as $error) {
-                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
-            }
-            throw new ValidationErrorException($errorMessages);
-//            return [
-//                'data' => [
-//                    'status' => 'failure',
-//                    'message' => [
-//                        'errors' => $errorMessages
-//                    ]],
-//                'statusCode' => Response::HTTP_BAD_REQUEST
-//            ];
+        $errors = $this->errorCheck($codeAndId);
+
+        if ($errors !== '') {
+            throw new ValidationErrorException($errors);
         }
 
         $entityManager = $this->managerRegistry->getManager();
@@ -114,23 +116,10 @@ class RegistrationService
         $user->setTelefon($contentArray['telefon']);
         $user->setPassword($contentArray['password']);
 
-        $errors = $this->validator->validate($user);
+        $errors = $this->errorCheck($user);
 
-        if (count($errors) > 0) {
-//             Handle validation errors
-            $errorMessages = [];
-            foreach ($errors as $error) {
-                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
-            }
-            throw new ValidationErrorException($errorMessages);
-//            return [
-//                'data' => [
-//                    'status' => 'failure',
-//                    'message' => [
-//                        'errors' => $errorMessages
-//                    ]],
-//                'statusCode' => Response::HTTP_BAD_REQUEST];
-
+        if ($errors !== '') {
+            throw new ValidationErrorException($errors);
         }
 
         $entityManager = $this->managerRegistry->getManager();
